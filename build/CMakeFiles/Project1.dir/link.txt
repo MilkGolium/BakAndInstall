@@ -1,1 +1,0 @@
-/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/Project1.dir/main.c.o CMakeFiles/Project1.dir/init.c.o CMakeFiles/Project1.dir/dbAPI.c.o CMakeFiles/Project1.dir/sqlite/sqlite3.c.o CMakeFiles/Project1.dir/platform/macOS/openURL.c.o -o Project1
