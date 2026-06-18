@@ -49,7 +49,7 @@
 
 1. 平台与配置解耦 —— 同一软件在不同操作系统下的下载链接、安装包路径、配置文件路径和初始化脚本均不相同，因此采用"1 张主表 + 多张子表"结构，避免单张宽表。
 2. 规范性与扩展性 —— 分类采用字典表管理，支持用户自定义标签；通过外键约束保证数据一致性。
-3. SQLite 特性优化 —— 主键统一使用 INTEGER PRIMARY KEY AUTOINCREMENT，布尔值用 INTEGER 的 0/1 表示。
+3. SQLite 特性优化 —— 主键统一使用 ~INTEGER PRIMARY KEY AUTOINCREMENT~，布尔值用 INTEGER 的 0/1 表示。
 
 ** 表关系
 
@@ -173,12 +173,12 @@ PRAGMA foreign_keys = ON 不能与 CREATE TABLE 揉在同一个 sqlite3_exec 批
 
 ** is_manual 加 CHECK 约束
 
-is_manual INTEGER NOT NULL DEFAULT 0 CHECK (is_manual IN (0, 1))
+~is_manual INTEGER NOT NULL DEFAULT 0 CHECK (is_manual IN (0, 1))~
 在列级别限制只能为 0 或 1，防止代码层写入 2、100 等非法值。
 
 ** UNIQUE 自动生成索引
 
-UNIQUE(app_id, platform) 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 (app_id) 已能覆盖按 app_id 的查询，无需再为 app_id 建单列索引。
+UNIQUE(app_id, platform) 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 (app_id) 已能覆盖按 ~app_id~ 的查询，无需再为 ~app_id~ 建单列索引。
 
 ** priority 字段控制安装顺序
 
