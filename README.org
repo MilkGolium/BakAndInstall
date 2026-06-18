@@ -17,7 +17,7 @@
 - 命名：函数名使用小驼峰（initDatabase, openURL），常量使用 k 前缀（kCreateTableSQL），宏使用全大写
 - 注释：中文注释
 - 返回值约定：成功返回 1，失败返回 0
-- 禁止使用 ~nullptr~、~std::string~ 等 C++ 特性
+- 禁止使用 ~nullptr~ 、 ~std::string~ 等 C++ 特性
 
 ** 代码修改守则
 
