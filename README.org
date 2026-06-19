@@ -208,6 +208,37 @@ cmake ..
 cmake --build .
 #+END_SRC
 
+* 测试
+
+** 运行测试
+
+程序启动时自动执行全部测试。测试使用 SQLite ~:memory:~ 模式，不影响产品数据库 ~app.db~ 。
+
+~main()~ 顺序执行：先调用 ~runTests()~ ，测试全部通过后才进入正常初始化流程。
+
+#+BEGIN_SRC sh
+bash compile.sh
+build/Project1
+#+END_SRC
+
+** 测试范围
+
+测试文件 ~test.c~ 包含以下测试模块（ ~runTests~ 函数）：
+
+| 测试模块             | 覆盖内容                                                    |
+|----------------------+-------------------------------------------------------------|
+| Category API         | 分类创建、重名拒绝、按 ID 删除、不存在的 ID 删除返回 1        |
+| App API              | 软件创建（含/不含分类）、重名拒绝、空描述、按 ID 删除          |
+| AppPlatform API      | 平台绑定、重复 (app_id, platform) 拒绝、按 ID 删除            |
+| AppConfig API        | 配置添加（仅路径/仅脚本/两者都有/空文本）                      |
+| Cascade (FK)         | 删除软件级联删除平台与配置、删除分类 SET NULL                  |
+| queryAppsByPlatform  | 按平台查询返回正确数量、返回空结果集                          |
+| deployAppConfig      | 配置文件复制（同路径）、多行配置处理、失败脚本返回 0           |
+
+** 命名规范
+
+测试中的 ~pass~ / ~fail~ 判断通过函数 ~t(name, ok)~ 输出， ~ok~ 为 1 时输出 ~PASS~ ，0 时输出 ~FAIL~ 。计数器全局累加，结果汇总在末尾。
+
 * Public API 参考
 
 ** ~init.h~ — 数据库初始化

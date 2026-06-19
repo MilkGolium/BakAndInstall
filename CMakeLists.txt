@@ -9,6 +9,7 @@ add_executable(Project1
     init.c
     dbAPI.c
     deploy.c
+    test.c
     sqlite/sqlite3.c
 )
 

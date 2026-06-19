@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "init.h"
+#include "test.h"
 
 /*
  * 建表 SQL —— 自动化运维 / 装机工具数据库初始化脚本
@@ -9,7 +10,7 @@
  *   2. 分类字典化管理 —— 支持用户自定义扩展
  *   3. 外键级联 —— 保证数据一致性
  */
-static const char* kCreateTableSQL =
+const char* kCreateTableSQL =
     /* 分类字典表：存储软件分类名称（如"文件管理"、"聊天通信"） */
     "CREATE TABLE IF NOT EXISTS categories ("
     "  id   INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -52,6 +53,11 @@ static const char* kCreateTableSQL =
 ;
 
 int main(void) {
+    if (runTests() != 0) {
+        fprintf(stderr, "Tests failed.\n");
+        return 1;
+    }
+
     if (!initDatabase("app.db", kCreateTableSQL)) {
         fprintf(stderr, "Database initialization failed.\n");
         return 1;
