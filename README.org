@@ -4,17 +4,18 @@
 
 * 给 AI Agent 的指引
 
+此文档格式是 org-mode ，修改文档的时候注意符合语法规范。对于表格，不需要特意添加空格试图和原有表格的管道符号对齐， Emacs 可以自动完成此操作。
 以下内容专门为首次接手本项目的 AI Agent 准备，请务必先阅读本节。
 
 ** 文件操作注意事项
 
-- ~sqlite/~ 目录下的 ~sqlite3.c~ (9.1 MB) 和 ~sqlite3.h~ (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 ~sqlite3.h~ 中的某个 API 签名时，应使用 grep 精确搜索。
+- ~sqlite/~ 目录下的 ~sqlite3.c~ (9.1 MB) 和 ~sqlite3.h~ (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 ~sqlite3.h~ 中的某个 API 签名时，应使用 ~grep~ 精确搜索。
 - ~shell.c~ (1.1 MB) 是 SQLite CLI shell 源码，本项目不使用，不应读取。
 
 ** 开发语言与风格
 
 - 语言：C11（标准 C，非 C++）
-- 命名：函数名使用小驼峰（ ~initDatabase, openURL~ ），常量使用 k 前缀（ ~kCreateTableSQL~ ），宏使用全大写
+- 命名：函数名使用小驼峰（ ~initDatabase, openURL~ ），常量使用 ~k~ 前缀（ ~kCreateTableSQL~ ），宏使用全大写
 - 注释：中文注释
 - 返回值约定：成功返回 1，失败返回 0
 - 禁止使用 ~nullptr~ 、 ~std::string~ 等 C++ 特性
@@ -28,20 +29,20 @@
 
 * 项目结构
 
-| 路径 | 职责 |
-|------|------|
-| main.c | 程序入口，定义建表 SQL 常量 kCreateTableSQL，调用 initDatabase |
-| init.c / init.h | 数据库初始化，封装 sqlite3_open / exec / close |
-| openURL.h | openURL 函数声明，各平台各自实现 |
-| sysUtil.h | 系统工具函数声明（下载、复制、目录创建、配置部署与脚本执行） |
-| dbAPI.c / dbAPI.h | 数据库业务 API（分类管理、软件管理、平台管理、配置管理、条件查询） |
-| CMakeLists.txt | CMake 构建配置，按平台条件编译 |
-| compile.sh | 一键编译脚本 |
-| sqlite/ | SQLite amalgamation，以源码形式参与编译（勿读） |
-| platform/ | 平台独立代码，按操作系统目录隔离 |
-| platform/macOS/ | macOS 实现（openURL.c, sysUtil.c） |
-| platform/Windows/ | Windows 实现（openURL.c, sysUtil.c） |
-| platform/Linux/ | Linux 实现（openURL.c, sysUtil.c） |
+| 路径                | 职责                                                            |
+|---------------------+-----------------------------------------------------------------|
+| ~main.c~            | 程序入口，定义建表 SQL 常量 ~kCreateTableSQL~ ，调用 ~initDatabase~ |
+| ~init.c~ / ~init.h~ | 数据库初始化，封装 ~sqlite3_open~ / ~exec~ / ~close~              |
+| ~openURL.h~         | ~openURL~ 函数声明，各平台各自实现                                 |
+| ~sysUtil.h~         | 系统工具函数声明（下载、复制、目录创建、配置部署与脚本执行）            |
+| ~dbAPI.c~ / dbAPI.h | 数据库业务 API（分类管理、软件管理、平台管理、配置管理、条件查询）      |
+| ~CMakeLists.txt~    | CMake 构建配置，按平台条件编译                                     |
+| ~compile.sh~        | 一键编译脚本                                                     |
+| ~sqlite/~           | SQLite amalgamation，以源码形式参与编译（勿读）                     |
+| ~platform/~         | 平台独立代码，按操作系统目录隔离                                    |
+| ~platform/macOS/~   | macOS 实现（ ~openURL.c~ , ~sysUtil.c~ ）                        |
+| ~platform/Windows/~ | Windows 实现（ ~openURL.c~ , ~sysUtil.c~ ）                      |
+| ~platform/Linux/~   | Linux 实现（ ~openURL.c~, ~sysUtil.c~ ）                         |
 
 * 数据库设计
 
@@ -49,7 +50,7 @@
 
 1. 平台与配置解耦 —— 同一软件在不同操作系统下的下载链接、安装包路径、配置文件路径和初始化脚本均不相同，因此采用"1 张主表 + 多张子表"结构，避免单张宽表。
 2. 规范性与扩展性 —— 分类采用字典表管理，支持用户自定义标签；通过外键约束保证数据一致性。
-3. SQLite 特性优化 —— 主键统一使用 ~INTEGER PRIMARY KEY AUTOINCREMENT~，布尔值用 ~INTEGER~ 的 0/1 表示。
+3. SQLite 特性优化 —— 主键统一使用 ~INTEGER PRIMARY KEY AUTOINCREMENT~，布尔值用 ~INTEGER~ 的 ~0/1~ 表示。
 
 ** 表关系
 
@@ -70,61 +71,61 @@ app_configs (配置与脚本)
 
 建表 SQL 全部定义在 ~main.c~ 的 ~kCreateTableSQL~ 常量字符串中，以下为各表结构的参考说明：
 
-*** categories（分类字典表）
+*** ~categories~ （分类字典表）
 
-| 字段 | 类型 | 约束 |
-|------|------|------|
-| ~id~ | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
-| ~name~ | ~TEXT~ | ~NOT NULL, UNIQUE~ |
+| 字段   | 类型      | 约束                        |
+|--------+-----------+-----------------------------|
+| ~id~   | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
+| ~name~ | ~TEXT~    | ~NOT NULL, UNIQUE~          |
 
 软件分类名称，如"文件管理"、"聊天通信"。
 
-*** apps（软件主表）
+*** ~apps~ （软件主表）
 
-| 字段 | 类型 | 约束 |
-|------|------|------|
-| ~id~ | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
-| ~name~ | ~TEXT~ | ~NOT NULL, UNIQUE~ |
+| 字段          | 类型      | 约束                                           |
+|---------------+-----------+------------------------------------------------|
+| ~id~          | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~                    |
+| ~name~        | ~TEXT~    | ~NOT NULL, UNIQUE~                             |
 | ~category_id~ | ~INTEGER~ | ~REFERENCES categories(id) ON DELETE SET NULL~ |
-| ~priority~ | ~INTEGER~ | ~NOT NULL DEFAULT 0~ |
-| ~description~ | ~TEXT~ | |
+| ~priority~    | ~INTEGER~ | ~NOT NULL DEFAULT 0~                           |
+| ~description~ | ~TEXT~    |                                                |
 
 ~priority~ 控制装机时的安装顺序，数值越小越优先（0 = 默认）。外键 ~ON DELETE SET NULL~ 使得删除分类不影响已有软件记录。
 
-*** app_platforms（软件平台与下载子表）
+*** ~app_platforms~ （软件平台与下载子表）
 
-| 字段 | 类型 | 约束 |
-|------|------|------|
-| ~id~ | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
-| ~app_id~ | ~INTEGER~ | ~NOT NULL, REFERENCES apps(id) ON DELETE CASCADE~ |
-| ~platform~ | ~TEXT~ | ~NOT NULL, CHECK (platform IN ('Windows','macOS','Linux','FreeBSD'))~ |
-| ~is_manual~ | ~INTEGER~ | ~NOT NULL DEFAULT 0, CHECK (is_manual IN (0, 1))~ |
-| ~download_url~ | ~TEXT~ | |
-| ~installer_path~ | ~TEXT~ | |
-| ~UNIQUE(app_id, platform)~ | | 联合唯一约束 |
+| 字段                       | 类型      | 约束                                                                  |
+|----------------------------+-----------+-----------------------------------------------------------------------|
+| ~id~                       | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~                                           |
+| ~app_id~                   | ~INTEGER~ | ~NOT NULL, REFERENCES apps(id) ON DELETE CASCADE~                     |
+| ~platform~                 | ~TEXT~    | ~NOT NULL, CHECK (platform IN ('Windows','macOS','Linux','FreeBSD'))~ |
+| ~is_manual~                | ~INTEGER~ | ~NOT NULL DEFAULT 0, CHECK (is_manual IN (0, 1))~                     |
+| ~download_url~             | ~TEXT~    |                                                                       |
+| ~installer_path~           | ~TEXT~    |                                                                       |
+| ~UNIQUE(app_id, platform)~ |           | 联合唯一约束                                                           |
 
-~is_manual~: 0 = 自动下载，1 = 手动安装。~UNIQUE~ 防止同一软件在同一个平台重复添加（该系统自动生成联合索引 ~(app_id, platform)~，因此无需再为 ~app_id~ 建单列索引）。
+~is_manual~ : 0 = 自动下载，1 = 手动安装。 ~UNIQUE~ 防止同一软件在同一个平台重复添加（该系统自动生成联合索引 ~(app_id, platform)~ ，因此无需再为 ~app_id~ 建单列索引）。
 
-*** app_configs（配置文件与脚本子表）
+*** ~app_configs~ （配置文件与脚本子表）
 
-| 字段 | 类型 | 约束 |
-|------|------|------|
-| ~id~ | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
+| 字段              | 类型      | 约束                                                       |
+|-------------------+-----------+------------------------------------------------------------|
+| ~id~              | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~                                |
 | ~app_platform_id~ | ~INTEGER~ | ~NOT NULL, REFERENCES app_platforms(id) ON DELETE CASCADE~ |
-| ~config_path~ | ~TEXT~ | |
-| ~script_type~ | ~TEXT~ | |
-| ~script_path~ | ~TEXT~ | |
+| ~config_path~     | ~TEXT~    |                                                            |
+| ~script_type~     | ~TEXT~    |                                                            |
+| ~script_path~     | ~TEXT~    |                                                            |
 
 记录每个平台版本对应的配置备份路径与初始化脚本（如 Shell、Bat、PowerShell）。
 
 ** 索引
 
-| 索引名 | 所在表 | 列 | 说明 |
-|--------|--------|----|------|
-| idx_apps_category | apps | category_id | 加速按分类查询软件 |
-| idx_app_platforms_plat | app_platforms | platform | 加速按平台筛选软件 |
-| idx_app_configs_platform | app_configs | app_platform_id | 加速按平台查配置 |
-| (自动) | app_platforms | (app_id, platform) | UNIQUE 自动生成，左前缀覆盖 app_id 查询 |
+| 索引名                     | 所在表          | 列                   | 说明                                     |
+|----------------------------+-----------------+----------------------+------------------------------------------|
+| ~idx_apps_category~        | ~apps~          | ~category_id~        | 加速按分类查询软件                         |
+| ~idx_app_platforms_plat~   | ~app_platforms~ | ~platform~           | 加速按平台筛选软件                         |
+| ~idx_app_configs_platform~ | ~app_configs~   | ~app_platform_id~    | 加速按平台查配置                           |
+| (自动)                     | ~app_platforms~ | ~(app_id, platform)~ | ~UNIQUE~ 自动生成，左前缀覆盖 ~app_id~ 查询 |
 
 * 跨平台策略
 
@@ -154,33 +155,33 @@ endif()
 
 ** 各平台实现对照
 
-| 函数 | macOS | Windows | Linux |
-|------|-------|---------|-------|
-| openURL | system("open ...") | ShellExecuteA | system("xdg-open ...") |
-| downloadFile | system("curl -L -o ...") | URLDownloadToFileA | system("curl -L -o ...") |
-| copyPath | system("cp -R ...") | SHFileOperation(FO_COPY) | system("cp -R ...") |
-| createDir | POSIX mkdir() 逐级 | CreateDirectoryA 逐级 | POSIX mkdir() 逐级 |
+| 函数           | macOS                      | Windows                    | Linux                      |
+|----------------+----------------------------+----------------------------+----------------------------|
+| ~openURL~      | ~system("open ...")~       | ~ShellExecuteA~            | ~system("xdg-open ...")~   |
+| ~downloadFile~ | ~system("curl -L -o ...")~ | ~URLDownloadToFileA~       | ~system("curl -L -o ...")~ |
+| ~copyPath~     | ~system("cp -R ...")~      | ~SHFileOperation(FO_COPY)~ | ~system("cp -R ...")~      |
+| ~createDir~    | POSIX ~mkdir()~ 逐级       | ~CreateDirectoryA~ 逐级    | POSIX ~mkdir()~ 逐级       |
 
 * 关键技术决策
 
-** PRAGMA foreign_keys 必须在连接后单独执行
+** ~PRAGMA foreign_keys~ 必须在连接后单独执行
 
 #+BEGIN_SRC c
 sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
 #+END_SRC
 
-~PRAGMA foreign_keys = ON~ 不能与 ~CREATE TABLE~ 揉在同一个 ~sqlite3_exec~ 批处理中，否则可能因 SQLite 内部机制被静默忽略。已在 ~init.c~ 中保证：open 之后、建表之前单独执行。
+~PRAGMA foreign_keys = ON~ 不能与 ~CREATE TABLE~ 揉在同一个 ~sqlite3_exec~ 批处理中，否则可能因 SQLite 内部机制被静默忽略。已在 ~init.c~ 中保证： ~open~ 之后、建表之前单独执行。
 
-** is_manual 加 CHECK 约束
+** ~is_manual~ 加 ~CHECK~ 约束
 
-~is_manual INTEGER NOT NULL DEFAULT 0 CHECK (is_manual IN (0, 1))~
+~is_manual INTEGER NOT NULL DEFAULT 0 CHECK (is_manual IN (0, 1))~ \\
 在列级别限制只能为 0 或 1，防止代码层写入 2、100 等非法值。
 
-** UNIQUE 自动生成索引
+** ~UNIQUE~ 自动生成索引
 
-~UNIQUE(app_id, platform)~ 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 ~(app_id)~ 已能覆盖按 ~app_id~ 的查询，无需再为 ~app_id~ 建单列索引。
+~UNIQUE(app_id, platform)~ 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 (~app_id~) 已能覆盖按 ~app_id~ 的查询，无需再为 ~app_id~ 建单列索引。
 
-** priority 字段控制安装顺序
+** ~priority~ 字段控制安装顺序
 
 ~apps.priority~ 数值越小越优先安装，可用于表达隐式依赖关系（如先装 Node.js 再装依赖它的脚本工具）。
 
@@ -208,68 +209,68 @@ cmake --build .
 
 * Public API 参考
 
-** init.h — 数据库初始化
+** ~init.h~ — 数据库初始化
 
-| 函数 | 作用 |
-|------|------|
-| initDatabase(dbPath, sql) | 打开/创建数据库并执行建表 SQL，成功返回 1 |
+| 函数                        | 作用                                  |
+|-----------------------------+---------------------------------------|
+| ~initDatabase(dbPath, sql)~ | 打开/创建数据库并执行建表 SQL，成功返回 1 |
 
-** openURL.h — 跨平台打开 URL
+** ~openURL.h~ — 跨平台打开 URL
 
-| 函数 | 作用 |
-|------|------|
-| openURL(url) | 调用系统默认浏览器打开 URL，成功返回 1 |
+| 函数           | 作用                               |
+|----------------+------------------------------------|
+| ~openURL(url)~ | 调用系统默认浏览器打开 URL，成功返回 1 |
 
-** sysUtil.h — 系统工具
+** ~sysUtil.h~ — 系统工具
 
-| 函数 | 作用 |
-|------|------|
-| downloadFile(url, destPath) | 从 URL 下载文件到本地路径，返回 1/0 |
-| copyPath(src, dst) | 递归复制文件或目录，返回 1/0 |
-| removePath(path, isDir) | 删除文件 (isDir=0) 或目录树 (isDir=1)，返回 1/0 |
-| createDir(path) | 递归创建目录，返回 1=已创建 / 0=已存在 / -1=错误 |
-| deployAppConfig(db, appPlatformId) | 根据 app_platform 的 ID 查询 app_configs，恢复配置文件并执行脚本，返回 1/0 |
+| 函数                                 | 作用                                                                       |
+|--------------------------------------+----------------------------------------------------------------------------|
+| ~downloadFile(url, destPath)~        | 从 URL 下载文件到本地路径，返回 1/0                                           |
+| ~copyPath(src, dst)~                 | 递归复制文件或目录，返回 1/0                                                  |
+| ~removePath(path, isDir)~            | 删除文件 ( ~isDir=0~ ) 或目录树 ( ~isDir=1~ )，返回 1/0                       |
+| ~createDir(path)~                    | 递归创建目录，返回 1=已创建 / 0=已存在 / -1=错误                               |
+| ~deployAppConfig(db, appPlatformId)~ | 根据 ~app_platform~ 的 ID 查询 ~app_configs~ ，恢复配置文件并执行脚本，返回 1/0 |
 
-** dbAPI.h — 分类管理（Categories）
+** ~dbAPI.h~ — 分类管理（Categories）
 
-| 函数 | 作用 |
-|------|------|
-| addCategory(db, name) | 新建分类，name 必须唯一 |
-| removeCategory(db, id) | 删除分类，关联软件的 category_id 自动置 NULL |
+| 函数                     | 作用                                          |
+|--------------------------+-----------------------------------------------|
+| ~addCategory(db, name)~  | 新建分类， ~name~ 必须唯一                      |
+| ~removeCategory(db, id)~ | 删除分类，关联软件的 ~category_id~ 自动置 ~NULL~ |
 
-** dbAPI.h — 软件管理（Apps）
+** ~dbAPI.h~ — 软件管理（Apps）
 
-| 函数 | 作用 |
-|------|------|
-| addApp(db, name, category_id, priority, description) | 新增软件，category_id ≤ 0 表示无分类 |
-| removeApp(db, id) | 删除软件，级联清理 app_platforms 和 app_configs |
-| queryAppsByPlatform(db, platform, callback, context) | 按平台查询软件列表，按 priority 升序排列，通过回调逐行返回 AppInfo |
+| 函数                                                   | 作用                                                             |
+|--------------------------------------------------------+------------------------------------------------------------------|
+| ~addApp(db, name, category_id, priority, description)~ | 新增软件， ~category_id~ ≤ 0 表示无分类                            |
+| ~removeApp(db, id)~                                    | 删除软件，级联清理 ~app_platforms~ 和 ~app_configs~                |
+| ~queryAppsByPlatform(db, platform, callback, context)~ | 按平台查询软件列表，按 ~priority~ 升序排列，通过回调逐行返回 ~AppInfo~ |
 
-** dbAPI.h — 平台管理（App Platforms）
+** ~dbAPI.h~ — 平台管理（App Platforms）
 
-| 函数 | 作用 |
-|------|------|
-| addAppPlatform(db, appId, platform, isManual, downloadUrl, installerPath) | 将软件绑定到平台，重复 (app_id, platform) 返回 0 |
-| removeAppPlatform(db, id) | 删除平台记录，级联清理 app_configs |
+| 函数                                                                        | 作用                                              |
+|-----------------------------------------------------------------------------+---------------------------------------------------|
+| ~addAppPlatform(db, appId, platform, isManual, downloadUrl, installerPath)~ | 将软件绑定到平台，重复 ( ~app_id, platform~ ) 返回 0 |
+| ~removeAppPlatform(db, id)~                                                 | 删除平台记录，级联清理 ~app_configs~                 |
 
-** dbAPI.h — 配置管理（App Configs）
+** ~dbAPI.h~ — 配置管理（App Configs）
 
-| 函数 | 作用 |
-|------|------|
-| addAppConfig(db, appPlatformId, configPath, scriptType, scriptPath) | 添加配置/脚本记录，文本参数可为 NULL |
-| removeAppConfig(db, id) | 删除配置记录 |
+| 函数                                                                  | 作用                               |
+|-----------------------------------------------------------------------+------------------------------------|
+| ~addAppConfig(db, appPlatformId, configPath, scriptType, scriptPath)~ | 添加配置/脚本记录，文本参数可为 ~NULL~ |
+| ~removeAppConfig(db, id)~                                             | 删除配置记录                        |
 
 * 开发路线
 
 当前已完成基础 API 层，后续方向：
 
-- [x] 分类管理（~addCategory~ / ~removeCategory~）
-- [x] 软件增删（~addApp~ / ~removeApp~）
-- [x] 平台绑定与解绑（~addAppPlatform~ / ~removeAppPlatform~）
-- [x] 配置与脚本管理（~addAppConfig~ / ~removeAppConfig~）
-- [x] 按平台条件查询（~queryAppsByPlatform~）
-- [x] 跨平台系统工具（~downloadFile~, ~copyPath~, ~createDir~, ~removePath~）
-- [x] 单应用配置部署（~deployAppConfig~ — 根据 ~appPlatformId~ 恢复配置并执行脚本，可供执行引擎循环调用）
+- [x] 分类管理（ ~addCategory~ / ~removeCategory~ ）
+- [x] 软件增删（ ~addApp~ / ~removeApp~ ）
+- [x] 平台绑定与解绑（ ~addAppPlatform~ / ~removeAppPlatform~ ）
+- [x] 配置与脚本管理（ ~addAppConfig~ / ~removeAppConfig~ ）
+- [x] 按平台条件查询（ ~queryAppsByPlatform~ ）
+- [x] 跨平台系统工具（ ~downloadFile~ , ~copyPath~ , ~createDir~ , ~removePath~ ）
+- [x] 单应用配置部署（ ~deployAppConfig~ — 根据 ~appPlatformId~ 恢复配置并执行脚本，可供执行引擎循环调用）
 - [ ] 一键装机执行引擎（遍历 → 下载/安装 → 执行脚本）
 - [ ] 配置备份与还原功能
 - [ ] 平台无关的 GUI（可选，预留 Qt6）
