@@ -8,23 +8,23 @@
 
 ** 文件操作注意事项
 
-- sqlite/ 目录下的 sqlite3.c (9.1 MB) 和 sqlite3.h (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 sqlite3.h 中的某个 API 签名时，应使用 grep 精确搜索。
-- shell.c (1.1 MB) 是 SQLite CLI shell 源码，本项目不使用，不应读取。
+- ~sqlite/~ 目录下的 ~sqlite3.c~ (9.1 MB) 和 ~sqlite3.h~ (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 ~sqlite3.h~ 中的某个 API 签名时，应使用 grep 精确搜索。
+- ~shell.c~ (1.1 MB) 是 SQLite CLI shell 源码，本项目不使用，不应读取。
 
 ** 开发语言与风格
 
 - 语言：C11（标准 C，非 C++）
-- 命名：函数名使用小驼峰（initDatabase, openURL），常量使用 k 前缀（kCreateTableSQL），宏使用全大写
+- 命名：函数名使用小驼峰（ ~initDatabase, openURL~ ），常量使用 k 前缀（ ~kCreateTableSQL~ ），宏使用全大写
 - 注释：中文注释
 - 返回值约定：成功返回 1，失败返回 0
 - 禁止使用 ~nullptr~ 、 ~std::string~ 等 C++ 特性
 
 ** 代码修改守则
 
-1. 始终遵循"平台无关代码放根目录，平台差异代码放 platform/" 的原则
-2. 数据库 Schema 在 main.c 的 kCreateTableSQL 常量字符串中定义，而非单独的文件
-3. ~PRAGMA foreign_keys = ON~ 已在 init.c 中单独执行，不得挪回 SQL 字符串中
-4. 不要在 sqlite/ 目录中创建或修改任何文件
+1. 始终遵循"平台无关代码放根目录，平台差异代码放 ~platform/~" 的原则
+2. 数据库 Schema 在 ~main.c~ 的 ~kCreateTableSQL~ 常量字符串中定义，而非单独的文件
+3. ~PRAGMA foreign_keys = ON~ 已在 ~init.c~ 中单独执行，不得挪回 SQL 字符串中
+4. 不要在 ~sqlite/~ 目录中创建或修改任何文件
 
 * 项目结构
 
@@ -68,7 +68,7 @@ app_configs (配置与脚本)
 
 ** 建表语句
 
-建表 SQL 全部定义在 main.c 的 ~kCreateTableSQL~ 常量字符串中，以下为各表结构的参考说明：
+建表 SQL 全部定义在 ~main.c~ 的 ~kCreateTableSQL~ 常量字符串中，以下为各表结构的参考说明：
 
 *** categories（分类字典表）
 
@@ -103,17 +103,17 @@ app_configs (配置与脚本)
 | ~installer_path~ | ~TEXT~ | |
 | ~UNIQUE(app_id, platform)~ | | 联合唯一约束 |
 
-is_manual: 0 = 自动下载，1 = 手动安装。UNIQUE 防止同一软件在同一个平台重复添加（该系统自动生成联合索引 (app_id, platform)，因此无需再为 app_id 建单列索引）。
+~is_manual~: 0 = 自动下载，1 = 手动安装。~UNIQUE~ 防止同一软件在同一个平台重复添加（该系统自动生成联合索引 ~(app_id, platform)~，因此无需再为 ~app_id~ 建单列索引）。
 
 *** app_configs（配置文件与脚本子表）
 
 | 字段 | 类型 | 约束 |
 |------|------|------|
-| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
-| app_platform_id | INTEGER | NOT NULL, REFERENCES app_platforms(id) ON DELETE CASCADE |
-| config_path | TEXT | |
-| script_type | TEXT | |
-| script_path | TEXT | |
+| ~id~ | ~INTEGER~ | ~PRIMARY KEY AUTOINCREMENT~ |
+| ~app_platform_id~ | ~INTEGER~ | ~NOT NULL, REFERENCES app_platforms(id) ON DELETE CASCADE~ |
+| ~config_path~ | ~TEXT~ | |
+| ~script_type~ | ~TEXT~ | |
+| ~script_path~ | ~TEXT~ | |
 
 记录每个平台版本对应的配置备份路径与初始化脚本（如 Shell、Bat、PowerShell）。
 
@@ -130,7 +130,7 @@ is_manual: 0 = 自动下载，1 = 手动安装。UNIQUE 防止同一软件在同
 
 ** 目录隔离
 
-平台差异代码按操作系统存放在 platform/ 下的三个子目录中，不涉及平台差异的代码直接放在项目根目录。
+平台差异代码按操作系统存放在 ~platform/~ 下的三个子目录中，不涉及平台差异的代码直接放在项目根目录。
 
 ** CMake 条件编译
 
@@ -169,7 +169,7 @@ endif()
 sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
 #+END_SRC
 
-PRAGMA foreign_keys = ON 不能与 CREATE TABLE 揉在同一个 sqlite3_exec 批处理中，否则可能因 SQLite 内部机制被静默忽略。已在 init.c 中保证：open 之后、建表之前单独执行。
+~PRAGMA foreign_keys = ON~ 不能与 ~CREATE TABLE~ 揉在同一个 ~sqlite3_exec~ 批处理中，否则可能因 SQLite 内部机制被静默忽略。已在 ~init.c~ 中保证：open 之后、建表之前单独执行。
 
 ** is_manual 加 CHECK 约束
 
@@ -178,11 +178,11 @@ PRAGMA foreign_keys = ON 不能与 CREATE TABLE 揉在同一个 sqlite3_exec 批
 
 ** UNIQUE 自动生成索引
 
-UNIQUE(app_id, platform) 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 (app_id) 已能覆盖按 ~app_id~ 的查询，无需再为 ~app_id~ 建单列索引。
+~UNIQUE(app_id, platform)~ 在应用层防止数据重复，同时 SQLite 自动为其创建联合索引。该索引的左前缀 ~(app_id)~ 已能覆盖按 ~app_id~ 的查询，无需再为 ~app_id~ 建单列索引。
 
 ** priority 字段控制安装顺序
 
-apps.priority 数值越小越优先安装，可用于表达隐式依赖关系（如先装 Node.js 再装依赖它的脚本工具）。
+~apps.priority~ 数值越小越优先安装，可用于表达隐式依赖关系（如先装 Node.js 再装依赖它的脚本工具）。
 
 * 构建系统
 
@@ -263,13 +263,13 @@ cmake --build .
 
 当前已完成基础 API 层，后续方向：
 
-- [x] 分类管理（addCategory / removeCategory）
-- [x] 软件增删（addApp / removeApp）
-- [x] 平台绑定与解绑（addAppPlatform / removeAppPlatform）
-- [x] 配置与脚本管理（addAppConfig / removeAppConfig）
-- [x] 按平台条件查询（queryAppsByPlatform）
-- [x] 跨平台系统工具（downloadFile, copyPath, createDir, removePath）
-- [x] 单应用配置部署（deployAppConfig — 根据 appPlatformId 恢复配置并执行脚本，可供执行引擎循环调用）
+- [x] 分类管理（~addCategory~ / ~removeCategory~）
+- [x] 软件增删（~addApp~ / ~removeApp~）
+- [x] 平台绑定与解绑（~addAppPlatform~ / ~removeAppPlatform~）
+- [x] 配置与脚本管理（~addAppConfig~ / ~removeAppConfig~）
+- [x] 按平台条件查询（~queryAppsByPlatform~）
+- [x] 跨平台系统工具（~downloadFile~, ~copyPath~, ~createDir~, ~removePath~）
+- [x] 单应用配置部署（~deployAppConfig~ — 根据 ~appPlatformId~ 恢复配置并执行脚本，可供执行引擎循环调用）
 - [ ] 一键装机执行引擎（遍历 → 下载/安装 → 执行脚本）
 - [ ] 配置备份与还原功能
 - [ ] 平台无关的 GUI（可选，预留 Qt6）
