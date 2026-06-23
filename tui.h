@@ -3,6 +3,10 @@
 
 #include <stddef.h>  // size_t
 
+// sqlite3 前向声明 —— tui.h 作为纯 Model+Controller 接口不需要包含
+// sqlite3.h 的完整定义（View 层禁止接触 SQLite 句柄）
+struct sqlite3;
+
 /*
  * tui.h — TUI 后端数据模型（Model）
  *
@@ -82,7 +86,10 @@ typedef enum {
 // 视图模式
 typedef enum {
     TUI_VIEW_BROWSE,        // 浏览模式：分类 → 软件 → 明细
+    TUI_VIEW_SEARCH,        // 搜索输入模式（键盘输入搜索关键字）
     TUI_VIEW_DEPLOY,        // 部署执行中（显示进度）
+    TUI_VIEW_INPUT,         // 文本输入弹窗（新增分类/软件）
+    TUI_VIEW_CONFIRM,       // 操作确认弹窗（删除确认）
     TUI_VIEW_CONFIRM_QUIT,  // 退出确认
 } TuiView;
 
@@ -118,6 +125,20 @@ typedef struct {
     char         dialogTitle[64];
     char         dialogMessage[256];
     int          dialogResult;           // -1 = 未决, 0 = 取消, 1 = 确认
+
+    // ======== 搜索过滤 ========
+    char         searchQuery[32];        // 当前搜索关键字
+    int          searchQueryLen;         // 关键字长度
+
+    // ======== 一键装机引擎状态 ========
+    char         deployLogs[24][128];    // 最近 24 行实时日志流水
+    int          deployLogCount;         // 已写入日志总行数
+    int          isDeploying;            // 引擎运行锁（1=执行中）
+
+    // ======== 输入弹窗状态（TUI_VIEW_INPUT / TUI_VIEW_CONFIRM） ========
+    char         inputBuffer[64];        // 弹窗文本输入缓冲区
+    int          inputBufferLen;         // 当前输入长度
+    int          contextId;              // 待删除/操作的分类或软件 ID
 } TuiState;
 
 // 全局单例（由 Controller 初始化，View 只读）
@@ -130,7 +151,7 @@ void tuiFreeState(void);
 // ---- 渲染入口（纯 View，只读 g_tui） ----
 void renderTuiScene(void);
 
-// ---- 主循环（初始化 termbox → 事件循环 → 清理） ----
-int  runTuiLoop(void);
+// ---- 主循环（初始化 termbox → 加载数据 → 事件循环 → 清理） ----
+int  runTuiLoop(struct sqlite3 *db);
 
 #endif // TUI_H
