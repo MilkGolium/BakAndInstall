@@ -51,6 +51,9 @@ typedef struct {
 
     // ---- 聚合 ----
     int  configCount;             // 该平台下配置/脚本数量
+
+    // ---- 交互状态（Controller 填写，View 只读） ----
+    int  isChecked;               // 用户勾选了此软件（用于一键装机）
 } TuiApp;
 
 // 配置/脚本明细模型
@@ -89,7 +92,8 @@ typedef struct {
     TuiFocus focus;                      // 当前焦点面板
     TuiView  view;                       // 当前视图模式
 
-    int      selectedCategoryId;         // 选中的分类 ID（-1 = 全部）
+    int      selectedCategoryId;         // 选中的分类 DB ID（-1 = 全部）
+    int      selectedCategoryIndex;      // categories[] 中选中的下标（-1 = 未选）
     int      selectedAppIndex;           // apps[] 中选中的下标（-1 = 未选）
     int      selectedConfigIndex;        // configs[] 中选中的下标（-1 = 未选）
 
@@ -122,5 +126,11 @@ extern TuiState g_tui;
 // ---- 生命周期 ----
 void tuiInitState(void);
 void tuiFreeState(void);
+
+// ---- 渲染入口（纯 View，只读 g_tui） ----
+void renderTuiScene(void);
+
+// ---- 主循环（初始化 termbox → 事件循环 → 清理） ----
+int  runTuiLoop(void);
 
 #endif // TUI_H

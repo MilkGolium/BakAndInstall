@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "init.h"
 #include "test.h"
+#include "tui.h"
 
 /*
  * 建表 SQL —— 自动化运维 / 装机工具数据库初始化脚本
@@ -54,7 +55,7 @@ const char* kCreateTableSQL =
 
 int main(void) {
     if (runTests() != 0) {
-        fprintf(stderr, "Tests failed.\n");
+        fprintf(stderr, "\nTests failed — aborting.\n");
         return 1;
     }
 
@@ -62,6 +63,6 @@ int main(void) {
         fprintf(stderr, "Database initialization failed.\n");
         return 1;
     }
-    printf("Database initialized successfully.\n");
-    return 0;
+
+    return runTuiLoop();
 }

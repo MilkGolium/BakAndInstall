@@ -2,6 +2,8 @@
 
 本项目是一个跨平台的自动化运维 / 装机工具，核心功能为"一键装机与配置还原"。用户可用它备份和恢复软件、配置文件以及运行初始化脚本，支持 Windows、macOS、Linux 三个平台。
 
+目前提供终端 TUI（基于 termbox2）作为主交互界面。
+
 * 给 AI Agent 的指引
 
 此文档格式是 org-mode ，修改文档的时候注意符合语法规范。对于表格，不需要特意添加空格试图和原有表格的管道符号对齐，因为 Emacs 可以自动完成此操作。 \\
@@ -11,11 +13,12 @@
 
 - ~sqlite/~ 目录下的 ~sqlite3.c~ (9.1 MB) 和 ~sqlite3.h~ (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 ~sqlite3.h~ 中的某个 API 签名时，应使用 ~grep~ 精确搜索。
 - ~shell.c~ (1.1 MB) 是 SQLite CLI shell 源码，本项目不使用，不应读取。
+- ~termbox2.h~ (~500 KB) 是单头文件 TUI 渲染库，Agent 可能不需要读取其内容（通过 ~tb_printf~ / ~tb_event_t~ / ~tb_poll_event~ 等 API 使用即可）。如需要查 API 签名，应使用 ~grep~。
 
 ** 开发语言与风格
 
 - 语言：C11（标准 C，非 C++）
-- 命名：函数名使用小驼峰（ ~initDatabase, openURL~ ），常量使用 ~k~ 前缀（ ~kCreateTableSQL~ ），宏使用全大写
+- 命名：函数名使用小驼峰（ ~initDatabase, openURL, renderTuiScene~ ），常量使用 ~k~ 前缀（ ~kCreateTableSQL~ ），宏使用全大写
 - 注释：中文注释
 - 返回值约定：成功返回 1，失败返回 0
 - 禁止使用 ~nullptr~ 、 ~std::string~ 等 C++ 特性
@@ -26,24 +29,75 @@
 2. 数据库 Schema 在 ~main.c~ 的 ~kCreateTableSQL~ 常量字符串中定义，而非单独的文件
 3. ~PRAGMA foreign_keys = ON~ 已在 ~init.c~ 中单独执行，不得挪回 SQL 字符串中
 4. 不要在 ~sqlite/~ 目录中创建或修改任何文件
+5. TUI 的 View（渲染层）禁止 ~#include "sqlite/sqlite3.h"~ ，禁止直接读写 ~sqlite3~ 句柄——它只能读 ~g_tui~ 缓存
+6. ~TB_IMPL~ 必须且只能在 ~tui.c~ 中定义一次（其他文件 ~#include "termbox2.h"~ 时不应定义 ~TB_IMPL~）
 
 * 项目结构
 
-| 路径                | 职责                                                            |
-|---------------------+-----------------------------------------------------------------|
-| ~main.c~            | 程序入口，定义建表 SQL 常量 ~kCreateTableSQL~ ，调用 ~initDatabase~ |
-| ~init.c~ / ~init.h~ | 数据库初始化，封装 ~sqlite3_open~ / ~exec~ / ~close~              |
-| ~deploy.c~ / ~deploy.h~ | 配置部署与脚本执行（ ~deployAppConfig~ ），平台无关的编排函数       |
-| ~openURL.h~         | ~openURL~ 函数声明，各平台各自实现                                 |
-| ~sysUtil.h~         | 系统工具函数声明（下载、复制、目录创建、脚本执行）                     |
-| ~dbAPI.c~ / dbAPI.h | 数据库业务 API（分类管理、软件管理、平台管理、配置管理、条件查询）      |
-| ~CMakeLists.txt~    | CMake 构建配置，按平台条件编译                                     |
-| ~compile.sh~        | 一键编译脚本                                                     |
-| ~sqlite/~           | SQLite amalgamation，以源码形式参与编译（勿读）                     |
-| ~platform/~         | 平台独立代码，按操作系统目录隔离                                    |
-| ~platform/macOS/~   | macOS 实现（ ~openURL.c~ , ~sysUtil.c~ ）                        |
-| ~platform/Windows/~ | Windows 实现（ ~openURL.c~ , ~sysUtil.c~ ）                      |
-| ~platform/Linux/~   | Linux 实现（ ~openURL.c~, ~sysUtil.c~ ）                         |
+| 路径                 | 职责                                                                 |
+|----------------------+----------------------------------------------------------------------|
+| ~main.c~             | 程序入口，定义建表 SQL 常量 ~kCreateTableSQL~ ，调用 ~initDatabase~ 后启动 TUI |
+| ~init.c~ / ~init.h~  | 数据库初始化，封装 ~sqlite3_open~ / ~exec~ / ~close~                   |
+| ~deploy.c~ / ~deploy.h~ | 配置部署与脚本执行（ ~deployAppConfig~ ），平台无关的编排函数            |
+| ~openURL.h~          | ~openURL~ 函数声明，各平台各自实现                                      |
+| ~sysUtil.h~          | 系统工具函数声明（下载、复制、目录创建、脚本执行）                          |
+| ~dbAPI.c~ / dbAPI.h  | 数据库业务 API（分类管理、软件管理、平台管理、配置管理、条件查询）           |
+| ~tui.h~              | TUI 前端展示模型（ ~TuiCategory~ , ~TuiApp~ , ~TuiAppConfig~ , ~TuiState~ ）及渲染/循环函数声明 |
+| ~tui.c~              | TUI 渲染（ ~renderTuiScene~ 及子函数）+ 键盘事件处理（ ~handleKeyEvent~ ）+ 主事件循环（ ~runTuiLoop~ ） |
+| ~termbox2.h~         | 单头文件 TUI 渲染库（~~500 KB）， ~tui.c~ 通过 ~#define TB_IMPL~ 编译其实现在此文件中 |
+| ~test.c~ / ~test.h~  | 29 个单元测试，程序启动时自动运行                                         |
+| ~CMakeLists.txt~     | CMake 构建配置，按平台条件编译                                           |
+| ~compile.sh~         | 一键编译脚本                                                           |
+| ~sqlite/~            | SQLite amalgamation，以源码形式参与编译（勿读）                          |
+| ~platform/~          | 平台独立代码，按操作系统目录隔离                                           |
+| ~platform/macOS/~    | macOS 实现（ ~openURL.c~ , ~sysUtil.c~ ）                              |
+| ~platform/Windows/~  | Windows 实现（ ~openURL.c~ , ~sysUtil.c~ ）                            |
+| ~platform/Linux/~    | Linux 实现（ ~openURL.c~, ~sysUtil.c~ ）                               |
+
+* TUI 终端界面
+
+** 架构：MVC 模式
+
+TUI 层采用经典 MVC 分层，通过 ~TuiState~ 全局单例 ~g_tui~ 解耦：
+
+- **Model**（~tui.h~）： ~TuiCategory~ , ~TuiApp~ , ~TuiAppConfig~ 三种扁平展示结构体 + ~TuiState~ 状态机
+- **View**（~tui.c~ 渲染函数）： ~renderTuiScene()~ 及以下 ~draw*~ 子函数——只读 ~g_tui~ ，纯绘图
+- **Controller**（~tui.c~ 事件循环）： ~runTuiLoop()~ 中的 ~tb_poll_event~ 循环 + ~handleKeyEvent()~ ——写 ~g_tui~ 并触重绘
+
+** 布局
+
+程序启动后进入三栏布局的 TUI 浏览模式：
+
+```
++--- 分类列表 ---+--- 软件列表 ---+
+| 常用           | [X] Google     |
+| 开发工具       | [ ] VS Code    |  ← 焦点绿色高亮
+| 聊天通信       | [ ] iTerm2     |
++----------------+----------------+
+| macOS          | App: Google    |
+|                | Configs: 3     |
++----------------+----------------+
+[↑↓ Navigate  Tab Switch  Space/Enter Check  q/ESC Quit]
+```
+
+- **左栏**：分类列表（选中行在焦点下显示绿底黑字高亮）
+- **右栏上**：当前分类下的软件列表， ~[X]~ / ~[ ]~ 标记勾选状态
+- **右栏下**：当前选中软件的详情（名称、平台、配置数量）
+- **底部状态栏**：当前平台标签 + 快捷键提示
+
+** 快捷键
+
+| 按键                     | 作用                               |
+|--------------------------+------------------------------------|
+| ~↑~ / ~↓~                | 列表上下导航                         |
+| ~Tab~                    | 切换焦点面板（分类 ↔ 软件 ↔ 详情）    |
+| ~Space~ / ~Enter~        | 勾选 / 取消勾选软件                   |
+| ~q~ / ~ESC~              | 退出（弹出确认对话框）                |
+| ~Y~ / ~Enter~ / ~N~ / ~ESC~ | 确认 / 取消退出（对话框中）         |
+| ~a~ / ~d~                | 添加 / 删除（预留）                   |
+| ~/~                      | 搜索 / 筛选（预留）                   |
+
+焦点面板的选中行使用绿色背景高亮（ ~TB_BLACK | TB_BOLD~ 前景 + ~TB_GREEN~ 背景），非焦点面板的选中行为普通反白（ ~TB_REVERSE~ ）。边框颜色也随焦点变化（绿色 ⇔ 灰色）。
 
 * 数据库设计
 
@@ -186,6 +240,14 @@ sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
 
 ~apps.priority~ 数值越小越优先安装，可用于表达隐式依赖关系（如先装 Node.js 再装依赖它的脚本工具）。
 
+** TUI 使用 ASCII 边框而非 UTF-8 线框字符
+
+为避免终端编码兼容性问题，所有面板边框统一使用 ~+~ 、 ~-~ 、 ~|~ 绘制，而非 ~┌~ ~┐~ ~└~ ~┘~ 等 Unicode 线框字符。
+
+** TUI 纯 View 层禁止接触 SQLite
+
+~renderTuiScene()~ 及其 ~draw*~ 子函数只从 ~g_tui~ 全局缓存中读取数据，不得 ~#include "sqlite/sqlite3.h"~ 或持有 ~sqlite3*~ 句柄。Controller 层负责从 SQLite 查询并填入 ~g_tui~。
+
 * 构建系统
 
 ** 依赖
@@ -193,6 +255,7 @@ sqlite3_exec(db, "PRAGMA foreign_keys = ON;", NULL, NULL, NULL);
 - C11 编译器（AppleClang / GCC / MSVC）
 - CMake >= 3.10
 - SQLite 以 amalgamation 源码嵌入，无需系统安装
+- termbox2 以 ~termbox2.h~ 单头文件嵌入，无需系统安装
 
 ** 编译命令
 
@@ -214,7 +277,7 @@ cmake --build .
 
 程序启动时自动执行全部测试。测试使用 SQLite ~:memory:~ 模式，不影响产品数据库 ~app.db~ 。
 
-~main()~ 顺序执行：先调用 ~runTests()~ ，测试全部通过后才进入正常初始化流程。
+~main()~ 顺序执行：先调用 ~runTests()~ ，测试全部通过后才进入数据库初始化与 TUI 主循环。
 
 #+BEGIN_SRC sh
 bash compile.sh
@@ -223,7 +286,7 @@ build/Project1
 
 ** 测试范围
 
-测试文件 ~test.c~ 包含以下测试模块（ ~runTests~ 函数）：
+目前共 29 个单元测试，全部在 ~test.c~ 的 ~runTests~ 函数中：
 
 | 测试模块             | 覆盖内容                                                    |
 |----------------------+-------------------------------------------------------------|
@@ -240,6 +303,15 @@ build/Project1
 测试中的 ~pass~ / ~fail~ 判断通过函数 ~t(name, ok)~ 输出， ~ok~ 为 1 时输出 ~PASS~ ，0 时输出 ~FAIL~ 。计数器全局累加，结果汇总在末尾。
 
 * Public API 参考
+
+** ~tui.h~ — TUI 生命周期与状态管理
+
+| 函数                    | 作用                                                   |
+|-------------------------+--------------------------------------------------------|
+| ~tuiInitState()~        | 初始化 ~g_tui~ 全局状态（焦点、视图、平台、索引清 -1）    |
+| ~tuiFreeState()~        | 释放 ~g_tui~ 中动态数组（ ~categories~ , ~apps~ , ~configs~ ） |
+| ~renderTuiScene()~      | 纯 View：根据 ~g_tui~ 绘制完整 TUI 画面                 |
+| ~runTuiLoop()~          | 初始化 termbox → 事件循环（ ~tb_poll_event~ ） → 清理，~main()~ 调用 |
 
 ** ~init.h~ — 数据库初始化
 
@@ -300,7 +372,7 @@ build/Project1
 
 * 开发路线
 
-当前已完成基础 API 层，后续方向：
+** 已完成
 
 - [x] 分类管理（ ~addCategory~ / ~removeCategory~ ）
 - [x] 软件增删（ ~addApp~ / ~removeApp~ ）
@@ -309,9 +381,20 @@ build/Project1
 - [x] 按平台条件查询（ ~queryAppsByPlatform~ ）
 - [x] 跨平台系统工具（ ~downloadFile~ , ~copyPath~ , ~createDir~ , ~removePath~ ）
 - [x] 单应用配置部署（ ~deployAppConfig~ — 根据 ~appPlatformId~ 恢复配置并执行脚本，可供执行引擎循环调用）
-- [ ] 一键装机执行引擎（遍历 → 下载/安装 → 执行脚本）
+- [x] TUI 浏览模式：三栏布局 + 面板焦点切换
+- [x] TUI 键盘事件分发（ ↑↓ 导航 / Tab 切换焦点 / Space 勾选 / ESC 退出）
+- [x] TUI 焦点指示（选中行绿底黑字高亮 vs 非焦点面板灰暗反白）
+
+** 进行中
+
+- [ ] 将真实 SQLite 数据填入 ~TuiState~ 缓存（替换当前硬编码 demo 数据）
+- [ ] Search/Filter 模式（ ~/~ 键触发）
+- [ ] 一键装机执行引擎（遍历勾选软件 → 下载/安装 → 执行配置脚本）
+
+** 规划中
+
 - [ ] 配置备份与还原功能
-- [ ] 平台无关的 GUI（可选，预留 Qt6）
+- [ ] 平台无关的 GUI（预留 Qt6 或直接在 TUI 上扩展）
 
 * 环境信息
 
