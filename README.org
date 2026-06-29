@@ -13,7 +13,7 @@
 
 - ~sqlite/~ 目录下的 ~sqlite3.c~ (9.1 MB) 和 ~sqlite3.h~ (675 KB) 文件巨大，Agent 不应读取其内容，否则会严重浪费上下文。读取 ~sqlite3.h~ 中的某个 API 签名时，应使用 ~grep~ 精确搜索。
 - ~shell.c~ (1.1 MB) 是 SQLite CLI shell 源码，本项目不使用，不应读取。
-- ~termbox2.h~ (~500 KB) 是单头文件 TUI 渲染库，Agent 可能不需要读取其内容（通过 ~tb_printf~ / ~tb_event_t~ / ~tb_poll_event~ 等 API 使用即可）。如需要查 API 签名，应使用 ~grep~。
+- ~termbox2.h~ (~500 KB) 是单头文件 TUI 渲染库，Agent 可能不需要读取其内容（通过 ~tb_printf~ / ~tb_event_t~ / ~tb_poll_event~ 等 API 使用即可）。如需要查 API 签名，应使用 ~grep~ 。
 
 ** 开发语言与风格
 
